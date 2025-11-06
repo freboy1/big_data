@@ -24,8 +24,7 @@ def send_to_api(text: str):
         "time": datetime.now().isoformat(),
         "place": "Остановка 'Центральная'",
         "aspect": "пунктуальность",
-        "recommendation": "Улучшить расписание автобусов",
-        "reply_text": f"Ваш запрос '{text}' обработан успешно!"
+        "recommendation": "Улучшить расписание автобусов"
     }
     return simulated_response
 
@@ -71,7 +70,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Ошибка при обращении к API: {e}")
         return
 
-    reply_text = api_response.get("reply_text", "Нет текста для ответа")
+    reply_text = api_response.get("recommendation", "Нет текста для ответа")
     await update.message.reply_text(reply_text)
 
     await save_to_db(api_response)
