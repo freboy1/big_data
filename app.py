@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 import asyncpg
 import os
 from dotenv import load_dotenv
@@ -7,6 +9,17 @@ load_dotenv()
 DB_URL = os.getenv("DATABASE_URL")
 
 app = FastAPI(title="Telegram Bot Analytics API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 async def get_connection():

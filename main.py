@@ -1,32 +1,70 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
+import asyncio
 import os
+import time
 import asyncpg
 from datetime import datetime
 
-load_dotenv()
+import ollama
+import json
+from datetime import datetime
+
+client = ollama.Client()
+
+
+load_dotenv()  
 TOKEN = os.getenv("TOKEN")
-API_URL = os.getenv("API_URL")  
 DB_URL = os.getenv("DATABASE_URL")
 
+
+async def wait_for_db(retries=10, delay=3):
+    for i in range(retries):
+        try:
+            conn = await asyncpg.connect(DB_URL)
+            await conn.close()
+            print("Database is ready!")
+            return
+        except Exception as e:
+            print(f"DB not ready, retrying in {delay}s... ({i+1}/{retries})")
+            await asyncio.sleep(delay)
+    raise Exception("Could not connect to the database.")
+
+asyncio.run(wait_for_db())
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("just greeting message")
+    await update.message.reply_text('''
+    Сәлеметсіз бе! 👋\n\n"
+    Мен – қоғамдық көлік саласындағы шағымдарды талдайтын интеллектуалды агентпін.\n
+    🚍 Сіздің хабарламаңызды қабылдап, негізгі мәселені, орнын және басымдығын анықтаймын.\n\n
+    Жай ғана шағымыңызды немесе байқаған мәселеңізді жазыңыз – мен талдауды бастаймын! ⚡️
+''')
 
 def send_to_api(text: str):
-    # response = requests.post(API_URL, json={"text": text})
-    # response.raise_for_status()
-    # return response.json()
-    simulated_response = {
-        "text": text,
-        "priority": "средний",
-        "object": "автобус",
-        "time": datetime.now().isoformat(),
-        "place": "Остановка 'Центральная'",
-        "aspect": "пунктуальность",
-        "recommendation": "Улучшить расписание автобусов"
-    }
-    return simulated_response
+
+    response = client.generate(
+        model="qwen3-complaints",
+        prompt=text
+    )
+    
+    json_text = response.response
+    
+    try:
+        data = json.loads(json_text)  
+    except json.JSONDecodeError:
+        data = {
+            "text": text,
+            "priority": "көрсетілмеген",
+            "object": "көрсетілмеген",
+            "time": datetime.now().isoformat(),
+            "place": "көрсетілмеген",
+            "aspect": "көрсетілмеген",
+            "recommendation": "көрсетілмеген"
+        }
+    
+    return data
+
 
 
 async def save_to_db(data: dict):
@@ -83,6 +121,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
+    # app.bot.request.timeout = 60
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     # app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))

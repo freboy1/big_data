@@ -1,0 +1,42 @@
+version: '3.5'
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: back-big-data
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - big-data
+    volumes:
+      - ./backend:/app 
+  worker:
+    build: ./backend
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: python main.py
+
+  db:
+    image: postgres:16
+    container_name: db-big-data
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: big_data
+    ports:
+      - "5433:5432"  # host port 5433, container port 5432
+    networks:
+      - big-data
+
+networks:
+  big-data:
+    driver: bridge
